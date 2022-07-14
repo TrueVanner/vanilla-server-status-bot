@@ -1,11 +1,16 @@
-const {Client, Intents, MessageEmbed, Message, MessageSelectMenu} = require('discord.js');
-const serverBackup = require("./serverbackup");
+const { Client, Intents, MessageEmbed } = require('discord.js');
 let config = require('./botconfig.json'); 
 let token = config.token;
 const bot = new Client({intents:[Intents.FLAGS.GUILDS]});
 
 function removeLastMessage(channel) {
-    channel.messages.fetch({limit: 1}).then(cache => cache.first().delete())
+	// add exit to the end because this is the end of my thread below
+    channel.messages.fetch({limit: 1}).then(cache => cache.first().delete()).then(exit)
+}
+
+const exit = () => {
+	console.log("exiting the process")
+	process.exit(1)
 }
 
 bot.on('ready', () => {
@@ -14,43 +19,46 @@ bot.on('ready', () => {
     
     const args = process.argv.slice(2);
 
-    //channel.send("This is a bot test. I am working on implementing new features, they will not affect the server. Sorry for the inconvenience.\n"/* + res*/)
-
     if (["0", "1"].includes(args[0])) {
         const statusbool = (args[0] == "0" ? true : false)
 
-        if (statusbool) serverBackup.start();
+        // if (statusbool) serverBackup.start();
+
+		channel.messages.fetchPinned().then(pinnedMsgs => {
+			if(!statusbool && pinnedMsgs.size == 0) exit();
         
-        const embed = new MessageEmbed()
-        .setTitle(`Vanilla server ${statusbool ? "OPENED" : "CLOSED"}!`)
-        .setColor(statusbool ? "GREEN" : "RED")
-        .setTimestamp();
+			const embed = new MessageEmbed()
+			.setTitle(`Vanilla server ${statusbool ? "OPENED" : "CLOSED"}!`)
+			.setColor(statusbool ? "GREEN" : "RED")
+			.setTimestamp();
 
-        if (statusbool) embed.addField("Current players:", "*<Empty>*");
-        
-        const toSend = (statusbool ? {content: "<@&923688308779941910>", embeds: [embed]} : {embeds: [embed]});
-        channel.send(toSend).then(msg => {
-            if (statusbool) 
-                msg.pin().then(() => removeLastMessage(channel))
-            else 
-                channel.messages.fetchPinned().then(cache => {
-                        let embed = new MessageEmbed(cache.first().embeds[0]);
+			if (statusbool) embed.addField("Current players:", "*<Empty>*");
+			
+			const toSend = (statusbool ? {/*content: "<@&923688308779941910>", */embeds: [embed]} : {embeds: [embed]});
+			channel.send(toSend).then(msg => {
 
-                        let diff = (new Date().getTime() - embed.timestamp);
-                        serverBackup.changeCount(diff);
-                        diff /= 1000;
+				if (statusbool) {
+					msg.pin().then(() => removeLastMessage(channel))
+				}
+				else {
+					let embed = new MessageEmbed(pinnedMsgs.first().embeds[0]);
 
-                        embed.fields[0].name = "Server was online for:";
-                        embed.fields[0].value = `:clock9: ${Math.floor(diff / 3600).toFixed(0)}h ${Math.floor(diff % 3600 / 60).toFixed(0)}m ${Math.floor(diff % 3600 % 60).toFixed(0)}s`
-                        cache.first().edit({embeds: [embed]});
-                        cache.first().unpin();
-                    })
-        });
+					let diff = (new Date().getTime() - embed.timestamp);
+					// serverBackup.changeCount(diff);
+					diff /= 1000;
+
+					embed.fields[0].name = "Server was online for:";
+					embed.fields[0].value = `:clock9: ${Math.floor(diff / 3600).toFixed(0)}h ${Math.floor(diff % 3600 / 60).toFixed(0)}m ${Math.floor(diff % 3600 % 60).toFixed(0)}s`
+					pinnedMsgs.first().edit({embeds: [embed]}).then(() => pinnedMsgs.first().unpin().then(exit));
+				}    
+			})
+		})
         
     } else if (args[0] == "2") {
         var res = "", emoji, names;
         if (args[1]) {
-            names = args[1].split(", ");
+            names = args[1].split(",");
+		
             names.forEach(name => {
                 emoji = guild.emojis.cache.find(emoji => emoji.name == (name.includes("_AFK") ? "terminatorsteveheadsticker" : (name.includes("(AFK)") ? "zzz" : "steveheadsticker")));
                 res += (`${emoji.toString()}  **${name}**\n`);
@@ -64,7 +72,7 @@ bot.on('ready', () => {
 
             let embed = new MessageEmbed(lastMessage.embeds[0]);
             embed.fields[0].value = res;
-            lastMessage.edit({embeds: [embed]});
+            lastMessage.edit({embeds: [embed]}).then(exit);
         });
     } else if(args[0] == "3") {
         const embed = new MessageEmbed()
@@ -73,11 +81,18 @@ bot.on('ready', () => {
         .setDescription(args[2])
         .setTimestamp();
 
-        channel.send({embeds: [embed]});
-    }
+        channel.send({embeds: [embed]}).then(exit);
+    } else if(args[0] == "4") {
+	const embed = new MessageEmbed()
+        .setColor("GREEN")
+        .setTitle("Vanilla server is starting!")
+        .setDescription("It should take around 2-3 minutes to start")
+        .setTimestamp();
 
-    setTimeout(() => process.exit(1), 3000);
+        channel.send({embeds: [embed]}).then(exit);
+	}
 
+	channel.send("This really is a test. Please look away");
     
 //this is old now lol
     //getting this code to work wasn't very complicated, but getting everything else was. Most of the functional part was taken from the internet, so take it as a whole

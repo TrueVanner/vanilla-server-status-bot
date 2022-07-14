@@ -1,7 +1,7 @@
 const fse = require("fs-extra");
 const path = require("path");
 
-const serverLocation = "C:/Users/the_best/Desktop/Another Cool Vanilla (1.18.1)";
+const serverLocation = "C:/Users/the_best/Desktop/Another Cool Vanilla (1.18.2)";
 const backupLocaton = path.join("D:/servers", path.basename(serverLocation) + " - backup");
 
 class ServerBackup {
